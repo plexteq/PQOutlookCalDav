@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="CalDav.Outlook.Synchronizer">
+    <Position X="0.75" Y="1.75" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <AssociationLine Name="OfflineCalendar" Type="CalCli.API.ICalendar">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.154" Y="0.089" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="Calendars" Type="CalCli.API.IRemoteCalendar">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.328" Y="-0.242" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="CurrentCalendar" Type="CalCli.API.IRemoteCalendar">
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.154" Y="0.068" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAASAAAAESAAQAHAAgABQIAMAARAAAAEAAIAAgIAAAI=</HashCode>
+      <FileName>Synchronizer.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="OfflineCalendar" />
+      <Property Name="CurrentCalendar" />
+      <Property Name="Controller" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="Calendars" />
+    </ShowAsCollectionAssociation>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Interface Name="CalDav.Outlook.ISynchronizer" Collapsed="true">
+    <Position X="0.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAASAAQACAAgAAAIAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ISynchronizer.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="CalCli.API.ICalendar">
+    <Position X="4.25" Y="3" Width="1.5" />
+    <TypeIdentifier />
+  </Interface>
+  <Interface Name="CalCli.API.IRemoteCalendar" Collapsed="true">
+    <Position X="4.25" Y="1.75" Width="1.5" />
+    <TypeIdentifier />
+  </Interface>
+  <Interface Name="CalDav.Outlook.IController">
+    <Position X="7.5" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAAAAAAAARAAAgAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IController.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="OfflineCalendar" />
+      <Property Name="RemoteCalendar" />
+    </ShowAsAssociation>
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
