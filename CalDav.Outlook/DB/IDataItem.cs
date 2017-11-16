@@ -9,7 +9,7 @@ namespace CalDav.Outlook
 {
     public enum Action
     {
-        Adding, Removing
+        RemoteAdd, RemoteDelete, LocalAdd, LocalDelete
     };
 
     public interface IDataItem

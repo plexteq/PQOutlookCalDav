@@ -67,12 +67,12 @@ namespace CalDav.Outlook
 
         public void Save(IEvent e)
         {
-            AddToQueue(e, Action.Adding);
+            AddToQueue(e, Action.RemoteAdd);
         }
 
         public void Delete(IEvent e)
         {
-            AddToQueue(e, Action.Removing);
+            AddToQueue(e, Action.RemoteDelete);
         }
 
         private void AddToQueue(IEvent e, Action action)
@@ -118,11 +118,11 @@ namespace CalDav.Outlook
                     if (itemsQueue.TryDequeue(out item)) {
                         try {
                             switch (item.EventAction) {
-                                case Action.Adding:
+                                case Action.RemoteAdd:
                                     RemoteCalendar.Save(item.Event);
                                     DbProvider.Remove(item, itemsQueueTableName);
                                     break;
-                                case Action.Removing:
+                                case Action.RemoteDelete:
                                     RemoteCalendar.Delete(item.Event);
                                     DbProvider.Remove(item, itemsQueueTableName);
                                     break;
