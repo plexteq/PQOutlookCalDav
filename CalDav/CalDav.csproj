@@ -54,7 +54,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Calendar\Objects\Recurrence.cs" />
     <Compile Include="Serializer.cs" />
-    <Compile Include="TimeZone.cs" />
+    <Compile Include="Calendar\Objects\TimeZone.cs" />
     <Compile Include="Calendar\Objects\ToDo.cs" />
     <Compile Include="Calendar\Objects\Trigger.cs" />
     <Compile Include="XMailAddress.cs" />

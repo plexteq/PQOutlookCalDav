@@ -1,8 +1,10 @@
 ﻿using CalCli.API;
+using System;
 using System.Collections.Specialized;
 
 namespace CalDav
 {
+    [Serializable]
     public class Contact : IContact
     {
         public Contact() { }
@@ -41,8 +43,7 @@ namespace CalDav
             Email = value.Substring(value.IndexOf(':') + 1);
             Name = parameters["CN"];
             SentBy = parameters["SENT-BY"];
-            if (!string.IsNullOrEmpty(SentBy))
-            {
+            if (!string.IsNullOrEmpty(SentBy)) {
                 SentBy = SentBy.Substring(SentBy.IndexOf(':') + 1);
             }
             Directory = parameters["DIR"];

@@ -19,7 +19,7 @@ namespace CalDav.Outlook
 
         [NonSerialized]
         public static string Directory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/AppData/Local/Microsoft/Outlook/";
-           
+
         [NonSerialized]
         private static string path = Directory + "calendar_synchronizer.cfg";
 
@@ -44,45 +44,27 @@ namespace CalDav.Outlook
 
         static public async Task Serialize()
         {
-            MemoryStream ms = new MemoryStream();
-            BinaryFormatter formatter = new BinaryFormatter();
-
             try {
-                formatter.Serialize(ms, instance);
-
-                byte[] encryptedData = Encrypt(ms.ToArray());
+                byte[] encryptedData = Encrypt(Utility.Serialize(instance));
 
                 File.WriteAllBytes(path, encryptedData);
             }
             catch (SerializationException e) {
                 log.Error(e.Message);
-                throw;
-            }
-            finally {
-                ms.Close();
+                log.Error("Can`t save the config file.");
             }
         }
 
         static public void Deserealize()
         {
             if (File.Exists(path)) {
-                MemoryStream ms = new MemoryStream();
-                BinaryFormatter formatter = new BinaryFormatter();
 
-                try {
-                    byte[] data = Decrypt(File.ReadAllBytes(path));
+                byte[] data = Decrypt(File.ReadAllBytes(path));
 
-                    ms.Write(data, 0, data.Length);
-                    ms.Seek(0, SeekOrigin.Begin);
+                instance = (Config)Utility.Deserialize(data);
 
-                    instance = (Config)formatter.Deserialize(ms);
-                }
-                catch (SerializationException e) {
-                    log.Error(e.Message);
-                    throw;
-                }
-                finally {
-                    ms.Close();
+                if (instance == null) {
+                    log.Error("Can`t read the config file. A new config file will be created.");
                 }
             }
         }
@@ -92,9 +74,9 @@ namespace CalDav.Outlook
             byte[] encryptedData = null;
 
             try {
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(3072)) {                    
+                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(3072)) {
                     rsa.FromXmlString(RSAKeyProvider.PrivateKey);
-                    
+
                     encryptedData = rsa.Encrypt(data, false);
                 }
             }
@@ -111,7 +93,7 @@ namespace CalDav.Outlook
             try {
                 using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(3072)) {
                     rsa.FromXmlString(RSAKeyProvider.PrivateKey);
-                    
+
                     decryptedData = rsa.Decrypt(data, false);
                 }
             }

@@ -5,6 +5,7 @@ using CalCli.API;
 
 namespace CalDav
 {
+    [Serializable]
     public class Event : IEvent
     {
         private DateTime DTSTAMP = DateTime.UtcNow;
@@ -44,23 +45,18 @@ namespace CalDav
 
         public ICollection<NameValuePairWithParameters> Properties { get; set; }
 
-        ICollection<IAlarm> IEvent.Alarms
-        {
-            get
-            {
+        ICollection<IAlarm> IEvent.Alarms {
+            get {
                 List<IAlarm> result = new List<IAlarm>();
-                foreach (Alarm alarm in Alarms)
-                {
+                foreach (Alarm alarm in Alarms) {
                     result.Add(alarm);
                 }
                 return result;
             }
 
-            set
-            {
+            set {
                 Alarms.Clear();
-                foreach (IAlarm alarm in value)
-                {
+                foreach (IAlarm alarm in value) {
                     Alarms.Add((Alarm)alarm);
                 }
             }
@@ -70,13 +66,10 @@ namespace CalDav
         {
             string name, value;
             var parameters = new XNameValueCollection();
-            while (rdr.Property(out name, out value, parameters) && !string.IsNullOrEmpty(name))
-            {
-                switch (name.ToUpper())
-                {
+            while (rdr.Property(out name, out value, parameters) && !string.IsNullOrEmpty(name)) {
+                switch (name.ToUpper()) {
                     case "BEGIN":
-                        switch (value)
-                        {
+                        switch (value) {
                             case "VALARM":
                                 var a = serializer.GetService<Alarm>();
                                 a.Deserialize(rdr, serializer);
@@ -176,15 +169,26 @@ namespace CalDav
             Event otherItem = obj as Event;
 
             return string.Equals(Summary, otherItem.Summary) &&
-                                //string.Equals(Description, otherItem.Description) &&
-                                Start.Equals(otherItem.Start) &&
-                                End.Equals(otherItem.End);
+                    //string.Equals(UID, otherItem.UID) &&
+                    //string.Equals(Description, otherItem.Description) &&
+                    Start.Equals(otherItem.Start) &&
+                    End.Equals(otherItem.End);
         }
 
         /* For IEnumerable method 'Contains' */
         public bool Equals(IEvent other)
         {
             return Equals(other as object);
+        }
+        public override int GetHashCode()
+        {
+            int hashSummary = Summary == null ? 0 : Summary.GetHashCode();
+            //int hashUID = UID == null ? 0 : UID.GetHashCode();
+            int hashDescription = Description == null ? 0 : Description.GetHashCode();
+            int hashStart = Start.HasValue ? 0 : Start.GetHashCode();
+            int hashEnd = End.HasValue ? 0 : End.GetHashCode();
+
+            return hashSummary ^ hashDescription ^ hashStart ^ hashEnd;// ^ hashUID;
         }
 
         /* For LINQ method 'Except' */
@@ -197,11 +201,27 @@ namespace CalDav
         public int GetHashCode(IEvent obj)
         {
             int hashSummary = Summary == null ? 0 : Summary.GetHashCode();
+            //int hashUID = UID == null ? 0 : UID.GetHashCode();
             int hashDescription = Description == null ? 0 : Description.GetHashCode();
             int hashStart = Start.HasValue ? 0 : Start.GetHashCode();
             int hashEnd = End.HasValue ? 0 : End.GetHashCode();
 
-            return hashSummary ^ hashDescription ^ hashStart ^ hashEnd;
+            return hashSummary ^ hashDescription ^ hashStart ^ hashEnd;// ^ hashUID;
+        }
+
+        public override string ToString()
+        {
+            string timeRange;
+
+            if (IsAllDay) timeRange = "All day";
+            else timeRange = string.Format("From: {0}, To: {1}",
+                Start.HasValue ? Start.Value.ToString() : "<unknown time>",
+                End.HasValue ? End.Value.ToString() : "<unknown time>");
+
+            return string.Format("Event '{0}' in '{1}', {2}",
+                string.IsNullOrWhiteSpace(Summary) ? "<unknown title>" : Summary,
+                string.IsNullOrWhiteSpace(Location) ? "<unknown location>" : Location,
+                timeRange);
         }
     }
 }

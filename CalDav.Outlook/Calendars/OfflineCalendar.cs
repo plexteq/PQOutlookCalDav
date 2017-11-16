@@ -13,25 +13,22 @@ namespace CalDav.Outlook
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(OfflineCalendar));
 
-        const string AddQueueTableName = "AddQueue";
-        const string RemoveQueueTableName = "RemoveQueue";
+        const string itemsQueueTableName = "ItemsQueue";
 
         Thread workerThread;
-        ConcurrentQueue<IEvent> addedQueue;
-        ConcurrentQueue<IEvent> removedQueue;
+        ConcurrentQueue<IDataItem> itemsQueue;
 
         IDataProvider dbProvider;
 
         public OfflineCalendar(ICalendar RemoteCalendar, IDataProvider dbProvider)
         {
-            addedQueue = new ConcurrentQueue<IEvent>();
-            removedQueue = new ConcurrentQueue<IEvent>();
+            itemsQueue = new ConcurrentQueue<IDataItem>();
 
             this.RemoteCalendar = RemoteCalendar;
 
             DbProvider = dbProvider;
 
-            UpdatingInterval = 10;
+            UpdatingInterval = 10;//interval in seconds
 
             workerThread = new Thread(DoWork);
         }
@@ -49,10 +46,8 @@ namespace CalDav.Outlook
 
         public string Name { get; set; }
 
-        public string FullName
-        {
-            get
-            {
+        public string FullName {
+            get {
                 if (RemoteCalendar != null)
                     return RemoteCalendar.FullName;
 
@@ -60,71 +55,55 @@ namespace CalDav.Outlook
             }
         }
 
-        public IDataProvider DbProvider
-        {
-            get
-            {
+        public IDataProvider DbProvider {
+            get {
                 return dbProvider;
             }
 
-            private set
-            {
+            private set {
                 dbProvider = value;
             }
         }
 
         public void Save(IEvent e)
         {
-            if (e != null && !addedQueue.Contains(e))
-            {
-                addedQueue.Enqueue(e);
-                DbProvider.Add(e, AddQueueTableName);
-            }
+            AddToQueue(e, Action.Adding);
         }
 
         public void Delete(IEvent e)
         {
-            if (e != null && !removedQueue.Contains(e))
-            {
-                removedQueue.Enqueue(e);
-                DbProvider.Add(e, RemoveQueueTableName);
+            AddToQueue(e, Action.Removing);
+        }
+
+        private void AddToQueue(IEvent e, Action action)
+        {
+            try {
+                if (e != null && !itemsQueue.Select(item => item.Event).Contains(e)) {
+                    IDataItem item = new DBItem(e, action);
+
+                    itemsQueue.Enqueue(item);
+                    DbProvider.Add(item, itemsQueueTableName);
+                }
+            }
+            catch (Exception ex) {
+                log.Error(ex.Message);
             }
         }
 
         private delegate void HandleQueueItem(IEvent e);
 
-        private void ProcessQueue(ConcurrentQueue<IEvent> queue, HandleQueueItem handleItem, string tableName)
-        {
-            IEvent e;
-
-            while (!queue.IsEmpty)
-            {
-                if (queue.TryDequeue(out e))
-                {
-                    try
-                    {
-                        handleItem(e);
-                        DbProvider.Remove(e,tableName);
-                    }
-                    catch (Exception ex)
-                    {
-                        log.Error(ex.Message);
-                    }
-                }
-            }
-        }
 
         private void Load()
         {
-            addedQueue = DbProvider.Load(AddQueueTableName);
-            removedQueue = DbProvider.Load(RemoveQueueTableName);
+            itemsQueue = DbProvider.Load(itemsQueueTableName);
         }
 
         public void DoWork()
         {
-            while (true)
-            {
-                Thread.Sleep(UpdatingInterval * 60 * 1000);
+            log.Info("Start the worker thread for a local items handling.");
+
+            while (true) {
+                Thread.Sleep(UpdatingInterval * 1000);
 
                 HandleQueues();
             }
@@ -132,28 +111,55 @@ namespace CalDav.Outlook
 
         private void HandleQueues()
         {
-            if (NetworkInterface.GetIsNetworkAvailable())
-            {
-                ProcessQueue(addedQueue, new HandleQueueItem(RemoteCalendar.Save), AddQueueTableName);
+            if (NetworkInterface.GetIsNetworkAvailable()) {
+                IDataItem item;
 
-                ProcessQueue(removedQueue, new HandleQueueItem(RemoteCalendar.Delete), RemoveQueueTableName);
+                while (!itemsQueue.IsEmpty) {
+                    if (itemsQueue.TryDequeue(out item)) {
+                        try {
+                            switch (item.EventAction) {
+                                case Action.Adding:
+                                    RemoteCalendar.Save(item.Event);
+                                    DbProvider.Remove(item, itemsQueueTableName);
+                                    break;
+                                case Action.Removing:
+                                    RemoteCalendar.Delete(item.Event);
+                                    DbProvider.Remove(item, itemsQueueTableName);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException(
+                                        "Tuple<IEvent, Action>.Item2",
+                                        Enum.GetName(typeof(Action), item.EventAction),
+                                        "Unknown action for the event");
+                            }
+
+                        }
+                        catch (Exception ex) {
+                            itemsQueue.Enqueue(item);
+                            log.Error(ex.Message);
+                            log.Error(string.Format("Item was returned to the queue - {0}", item.Event.Summary));
+                        }
+                    }
+                }
             }
         }
 
         public void Update()
         {
-            if (!workerThread.IsAlive)
-            {
-                DbProvider.CreateIfNotExist(new string[] { AddQueueTableName, RemoveQueueTableName });
+            if (!workerThread.IsAlive) {
+                DbProvider.CreateIfNotExist(new string[] { itemsQueueTableName });
                 Load();
+
+                log.Info("Handling items from a DB...");
                 HandleQueues();
+                log.Info("Items handled successful");
 
                 workerThread.Start();
             }
         }
 
         #region Unsupported
-       
+
         public ICollection<IEvent> GetEvents(DateTime? from = default(DateTime?), DateTime? to = default(DateTime?))
         {
             throw new NotImplementedException();

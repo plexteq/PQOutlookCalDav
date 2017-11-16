@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace CalCli.API
 {
+    [Serializable]
     public class NameValuePairWithParameters
     {
         public NameValuePairWithParameters(string name, string val, XNameValueCollection parameters)

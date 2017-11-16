@@ -233,7 +233,7 @@
             this.Controls.Add(this.connectionGroupBox);
             this.Name = "ConfigWindow";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "CalCli Demo";
+            this.Text = "Configuration";
             this.Load += new System.EventHandler(this.Main_Load);
             this.connectionGroupBox.ResumeLayout(false);
             this.connectionGroupBox.PerformLayout();

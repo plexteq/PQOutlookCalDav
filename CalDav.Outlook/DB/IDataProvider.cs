@@ -1,16 +1,18 @@
 ﻿using CalCli.API;
+using System;
 using System.Collections.Concurrent;
 
 namespace CalDav.Outlook
 {
+
     public interface IDataProvider
     {
         void CreateIfNotExist(string[] tables);
 
-        void Add(IEvent item, string tableName);
+        void Add(IDataItem item, string tableName);
 
-        void Remove(IEvent item, string tableName);
+        void Remove(IDataItem item, string tableName);
 
-        ConcurrentQueue<IEvent> Load(string table);
+        ConcurrentQueue<IDataItem> Load(string table);
     }
 }

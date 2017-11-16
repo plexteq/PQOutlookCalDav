@@ -74,7 +74,7 @@ namespace CalDav.Outlook
 
             Syncronize();
 
-            SetLocalEventsHandlers();
+            //SetLocalEventsHandlers();
         }
 
         public void Syncronize()
@@ -85,6 +85,7 @@ namespace CalDav.Outlook
 
                 return;
             }
+
 
             ICollection<IEvent> remoteEvents = RemoteCalendar.GetEvents(start, end);
 
@@ -109,6 +110,8 @@ namespace CalDav.Outlook
 
             /* Remove deleted on the remote server events from local calendar */
             removedLocalEvents.ForEach(item => OutlookCalendar.Delete(item));
+
+            SetLocalEventsHandlers();
         }
 
         private void UpdateEventsUID()
@@ -165,9 +168,10 @@ namespace CalDav.Outlook
 
         private bool DeleteFromRemote(IEvent item)
         {
-            if (NetworkInterface.GetIsNetworkAvailable())
-                return RepeatedDeleteFromRemote(item);
-            else OfflineCalendar.Delete(item);
+            //if (NetworkInterface.GetIsNetworkAvailable())
+            //    return RepeatedDeleteFromRemote(item);
+            //else
+                OfflineCalendar.Delete(item);
 
             return true;
         }
@@ -176,9 +180,10 @@ namespace CalDav.Outlook
         {
             try
             {
-                if (NetworkInterface.GetIsNetworkAvailable())
-                    RemoteCalendar.Save(item);
-                else OfflineCalendar.Save(item);
+                //if (NetworkInterface.GetIsNetworkAvailable())
+                //    RemoteCalendar.Save(item);
+                //else
+                    OfflineCalendar.Save(item);
 
                 return true;
             }

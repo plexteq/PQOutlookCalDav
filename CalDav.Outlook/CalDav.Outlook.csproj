@@ -84,6 +84,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Config.cs" />
+    <Compile Include="DB\DBItem.cs" />
+    <Compile Include="DB\IDataItem.cs" />
     <Compile Include="Extensions\Extensions.cs" />
     <Compile Include="IController.cs" />
     <Compile Include="DB\IDataProvider.cs" />
@@ -96,6 +98,7 @@
     <Compile Include="DB\SQLiteDBProvider.cs" />
     <Compile Include="RSAKeyProvider.cs" />
     <Compile Include="Synchronizer.cs" />
+    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CalCli.Api\CalCli.Api.csproj">

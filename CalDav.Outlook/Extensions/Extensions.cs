@@ -2,7 +2,9 @@
 using Microsoft.Office.Interop.Outlook;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,8 +22,7 @@ namespace CalDav.Outlook
 
         public static IEvent ConvertToEvent(this AppointmentItem appointment)
         {
-            IEvent item = new Event()
-            {
+            IEvent item = new Event() {
                 Start = appointment.Start,
                 End = appointment.End,
                 Description = appointment.Body ?? "",
@@ -44,8 +45,7 @@ namespace CalDav.Outlook
 
         public static void AlarmsToList(this AppointmentItem appointment, ICollection<IAlarm> alarms)
         {
-            if (appointment.ReminderSet)
-            {
+            if (appointment.ReminderSet) {
                 IAlarm alarm = new Alarm();
                 alarm.Trigger = new Trigger();
 
@@ -57,8 +57,7 @@ namespace CalDav.Outlook
 
         public static ICollection<string> CategoriesToList(this AppointmentItem appointment)
         {
-            if (!string.IsNullOrWhiteSpace(appointment.Categories))
-            {
+            if (!string.IsNullOrWhiteSpace(appointment.Categories)) {
                 string[] categories = appointment.Categories.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 return categories.ToList();
             }
@@ -68,10 +67,8 @@ namespace CalDav.Outlook
 
         public static void AttachmentsToList(this AppointmentItem appointment, ICollection<Uri> attachments)
         {
-            if (appointment.Attachments.Count > 0)
-            {
-                foreach (Attachment att in appointment.Attachments)
-                {
+            if (appointment.Attachments.Count > 0) {
+                foreach (Attachment att in appointment.Attachments) {
                     attachments.Add(new Uri(att.PathName));
                 }
             }
@@ -79,12 +76,9 @@ namespace CalDav.Outlook
 
         public static void AttendiesToList(this AppointmentItem appointment, ICollection<IContact> attendies)
         {
-            if (appointment.Recipients.Count > 0)
-            {
-                foreach (Recipient recp in appointment.Recipients)
-                {
-                    attendies.Add(new Contact()
-                    {
+            if (appointment.Recipients.Count > 0) {
+                foreach (Recipient recp in appointment.Recipients) {
+                    attendies.Add(new Contact() {
                         Name = recp.Name,
                         Email = recp.Address
                     });
@@ -109,8 +103,7 @@ namespace CalDav.Outlook
 
         public static IContact ConvertToContact(this AddressEntry addressEntry)
         {
-            IContact contact = new Contact()
-            {
+            IContact contact = new Contact() {
                 Name = addressEntry.Name,
                 Email = addressEntry.Address
             };
@@ -119,8 +112,7 @@ namespace CalDav.Outlook
         }
         public static void FromContact(this AddressEntry addressEntry, IContact contact)
         {
-            if (contact != null)
-            {
+            if (contact != null) {
                 addressEntry.Name = contact.Name;
                 addressEntry.Address = contact.Email;
             }
@@ -141,17 +133,15 @@ namespace CalDav.Outlook
             appointment.AllDayEvent = item.IsAllDay;
             appointment.Subject = item.Summary ?? "";
             appointment.Location = item.Location;
-            
+
             //appointment.GetOrganizer().FromContact(item.Organizer);
             appointment.Sensitivity = item.Class.ConvertToSensitivity();
 
-            foreach (Uri uri in item.Attachments)
-            {
+            foreach (Uri uri in item.Attachments) {
                 appointment.Attachments.Add(uri);
             }
 
-            foreach (IContact contact in item.Attendees)
-            {
+            foreach (IContact contact in item.Attendees) {
                 if (!string.IsNullOrWhiteSpace(contact.Name))
                     appointment.Recipients.Add(contact.Name);
             }
