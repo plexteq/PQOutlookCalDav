@@ -27,5 +27,11 @@ namespace CalDav.Outlook
                 return item.Item2;
             }
         }
+
+        public override string ToString()
+        {
+            return string.Format("DBItem '{0} - {1}'",
+                   Event, Enum.GetName(typeof(Action), EventAction));
+        }
     }
 }

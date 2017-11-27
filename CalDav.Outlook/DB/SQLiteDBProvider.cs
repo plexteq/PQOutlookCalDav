@@ -63,9 +63,10 @@ namespace CalDav.Outlook
                     else
                         throw new ArgumentNullException(
                             "Can`t serialize an event to the byte array. Writing to the DB was rejected.");
-
-
+                    
                     result = ExecuteCommand(cmd);
+
+                    log.Info(string.Format("Item {0} added to the DB", item.ToString()));
                 }
             }
             catch (Exception e) {
@@ -80,10 +81,10 @@ namespace CalDav.Outlook
                 using (SQLiteCommand command = new SQLiteCommand()) {
 
                     command.CommandText = string.Format(
-                        "DELETE FROM {0} WHERE Title = @Title AND UID = @UID AND Action = @Action", tableName);
+                        "DELETE FROM {0} WHERE Title = @Title AND Action = @Action", tableName);
 
                     command.Parameters.AddWithValue("@Title", item.Event.Summary);
-                    command.Parameters.AddWithValue("@UID", item.Event.UID);
+                    //command.Parameters.AddWithValue("@UID", item.Event.UID);
                     command.Parameters.AddWithValue("@Action", item.EventAction);
 
 

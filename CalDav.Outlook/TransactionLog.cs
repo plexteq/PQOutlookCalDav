@@ -30,13 +30,17 @@ namespace CalDav.Outlook
             LocalCalendar = localCal;
             DbProvider = dataProvider;
             UpdatingInterval = updatingInterval;
+
+            if (LocalCalendar is ILoggable) {
+                (LocalCalendar as ILoggable).TransactionLog = this;
+            }
         }
 
         public TransactionLog(
             ICalendar remoteCal,
             ICalendar localCal,
             IDataProvider dataProvider)
-            : this(remoteCal, localCal, dataProvider, 10)
+            : this(remoteCal, localCal, dataProvider, 30)
         {
         }
 
@@ -99,12 +103,16 @@ namespace CalDav.Outlook
         public void Add(IEvent item, Action action)
         {
             try {
-                if (item != null && !itemsQueue.Select(dbItem => dbItem.Event).Contains(item)) {
-                    IDataItem dbItem = new DBItem(item, action);
+                if (item == null) return;
 
-                    itemsQueue.Enqueue(dbItem);
-                    DbProvider.Add(dbItem, itemsQueueTableName);
-                }
+                IDataItem newDbItem = new DBItem(item, action);
+
+                if (!IsAddingAllowed(newDbItem)) return;
+
+                itemsQueue.Enqueue(newDbItem);
+                DbProvider.Add(newDbItem, itemsQueueTableName);
+
+                log.Info(string.Format("Item {0} added to the transaction queue", item.ToString()));
             }
             catch (Exception ex) {
                 log.Error(ex.Message);
@@ -115,7 +123,8 @@ namespace CalDav.Outlook
         {
             if (!workerThread.IsAlive) {
                 DbProvider.CreateIfNotExist(new string[] { itemsQueueTableName });
-                DbProvider.Load(itemsQueueTableName);
+
+                itemsQueue = DbProvider.Load(itemsQueueTableName);
 
                 workerThread.Start();
             }
@@ -131,7 +140,7 @@ namespace CalDav.Outlook
                 HandleQueues();
             }
         }
-
+        
         private void HandleQueues()
         {
             if (!NetworkInterface.GetIsNetworkAvailable())
@@ -144,12 +153,12 @@ namespace CalDav.Outlook
                     continue;
 
                 try {
+                    //TODO: 1. Handle exception when a remote calendar is shutdown, or not response, or credentials was changed or other errors
                     switch (item.EventAction) {
                         case Action.RemoteAdd:
                             log.Info(string.Format("Saving item '{0}' to the remote calendar", item.Event));
 
                             RemoteCalendar.Save(item.Event);
-                            DbProvider.Remove(item, itemsQueueTableName);
                             break;
                         case Action.RemoteDelete:
                             log.Info(string.Format("Deleting item '{0}' from the remote calendar", item.Event));
@@ -157,7 +166,6 @@ namespace CalDav.Outlook
                             if (!RepeatedDeleteFromRemote(item.Event))
                                 LocalCalendar.Save(item.Event);
 
-                            DbProvider.Remove(item, itemsQueueTableName);
                             break;
                         case Action.LocalAdd:
                             log.Info(string.Format("Saving item '{0}' to the local calendar", item.Event));
@@ -175,6 +183,8 @@ namespace CalDav.Outlook
                                 Enum.GetName(typeof(Action), item.EventAction),
                                 "Unknown action for the event");
                     }
+
+                    DbProvider.Remove(item, itemsQueueTableName);
                 }
                 catch (Exception ex) {
                     itemsQueue.Enqueue(item);
@@ -182,6 +192,33 @@ namespace CalDav.Outlook
                     log.Error(string.Format("Item was returned to the queue - {0}", item.Event));
                 }
             }
+        }
+
+        private bool IsAddingAllowed(IDataItem newItem)
+        {
+            foreach (IDataItem dbItem in itemsQueue) {
+                if (!dbItem.Event.Equals(newItem.Event)) continue;
+
+                if (dbItem.EventAction.Equals(newItem.EventAction)) {
+                    log.Info(
+                        string.Format("Item {0} already exists in the queue", dbItem.ToString()));
+                    return false;
+                }
+
+                if (IsActionConflictWithEnqueued(dbItem.EventAction, newItem.EventAction)) {
+                    log.Info(
+                        string.Format("Item {0} must be added to remote calendar before deleting from a local",
+                            dbItem.ToString()));
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsActionConflictWithEnqueued(Action actionEnqueued, Action actionNew)
+        {
+            return actionEnqueued == Action.RemoteAdd && actionNew == Action.LocalDelete;
         }
 
         private bool RepeatedDeleteFromRemote(IEvent item)
@@ -206,6 +243,11 @@ namespace CalDav.Outlook
                 item));
 
             return false;
+        }
+
+        public void Stop()
+        {
+            workerThread.Interrupt();
         }
     }
 }

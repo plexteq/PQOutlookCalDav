@@ -9,5 +9,11 @@ namespace CalDav.Outlook
 
         void Add(IEvent item, Action action);
         void Start();
+        void Stop();
+    }
+
+    public interface ILoggable
+    {
+        ITransactionLog TransactionLog { get; set; }
     }
 }

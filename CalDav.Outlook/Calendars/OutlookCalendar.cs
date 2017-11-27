@@ -7,16 +7,14 @@ using System.Collections.Generic;
 
 namespace CalDav.Outlook
 {
-    public class OutlookCalendar : ICalendar, IItemsChangesNotify
+    public class OutlookCalendar : ICalendar, ILoggable
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(OutlookCalendar));
         ConcurrentDictionary<IEvent, AppointmentItem> itemsMap;
         MAPIFolder localCalendar;
         Application addIn;
-
-        ItemAdded itemAddedHandler;
-        ItemChanged itemChangedHandler;
-        ItemBeforeDelete itemBeforeDeleteHandler;
+        ITransactionLog transactionLog;
+        Items _items;
 
         public OutlookCalendar(Application addIn, string name)
         {
@@ -45,6 +43,15 @@ namespace CalDav.Outlook
                             if (calendar.Name.Contains(Name)) {
                                 localCalendar = calendar;
 
+                                _items = localCalendar.Items;
+
+                                _items.ItemAdd += new ItemsEvents_ItemAddEventHandler(Items_ItemAdd);
+                                _items.ItemChange += new ItemsEvents_ItemChangeEventHandler(Items_ItemChange);
+                                
+                                foreach (AppointmentItem appt in _items) {
+                                    appt.BeforeDelete += new ItemEvents_10_BeforeDeleteEventHandler(AppItem_BeforeDelete);
+                                }
+
                                 break;
                             }
                         }
@@ -58,44 +65,13 @@ namespace CalDav.Outlook
             }
         }
 
-        public ItemAdded ItemAddedHandler {
+        public ITransactionLog TransactionLog {
             get {
-                return itemAddedHandler;
+                return transactionLog;
             }
 
             set {
-                itemAddedHandler = value;
-
-                LocalCalendar.Items.ItemAdd -= Items_ItemAdd;
-                LocalCalendar.Items.ItemAdd += Items_ItemAdd;
-            }
-        }
-
-        public ItemChanged ItemChangedHandler {
-            get {
-                return itemChangedHandler;
-            }
-
-            set {
-                itemChangedHandler = value;
-
-                LocalCalendar.Items.ItemChange -= Items_ItemChange;
-                LocalCalendar.Items.ItemChange += Items_ItemChange;
-            }
-        }
-
-        public ItemBeforeDelete ItemBeforeDeleteHandler {
-            get {
-                return itemBeforeDeleteHandler;
-            }
-
-            set {
-                itemBeforeDeleteHandler = value;
-
-                foreach (AppointmentItem appt in localCalendar.Items) {
-                    appt.BeforeDelete -= AppItem_BeforeDelete;
-                    appt.BeforeDelete += AppItem_BeforeDelete;
-                }
+                transactionLog = value;
             }
         }
 
@@ -135,11 +111,9 @@ namespace CalDav.Outlook
         public void Save(IEvent e)
         {
             if (!itemsMap.ContainsKey(e)) {
-                AppointmentItem appointment = LocalCalendar.Items.Add(OlItemType.olAppointmentItem);
+                AppointmentItem appointment = _items.Add(OlItemType.olAppointmentItem);
                 appointment = appointment.FromEvent(e);
-
-                appointment.BeforeDelete -= AppItem_BeforeDelete;
-                appointment.BeforeDelete += AppItem_BeforeDelete;
+                
                 itemsMap[e] = appointment;
             }
 
@@ -182,9 +156,7 @@ namespace CalDav.Outlook
         private void Items_ItemAdd(object Item)
         {
             try {
-                AppointmentItem appItem = (Item as AppointmentItem);
-                appItem.BeforeDelete -= AppItem_BeforeDelete;
-                appItem.BeforeDelete += AppItem_BeforeDelete;
+                AppointmentItem appItem = Item as AppointmentItem;
 
                 IEvent localEvent = null;
                 foreach (IEvent e in itemsMap.Keys) {
@@ -195,11 +167,12 @@ namespace CalDav.Outlook
                 }
 
                 if (localEvent == null) {
+                    appItem.BeforeDelete += new ItemEvents_10_BeforeDeleteEventHandler(AppItem_BeforeDelete);
                     localEvent = appItem.ConvertToEvent();
                     itemsMap[localEvent] = appItem;
                 }
 
-                ItemAddedHandler(localEvent);
+                TransactionLog.Add(localEvent, Action.RemoteAdd);
             }
             catch (System.Exception ex) {
                 log.Error(ex.Message);
@@ -222,7 +195,7 @@ namespace CalDav.Outlook
                         IEvent newEvent = appItem.ConvertToEvent();
                         newEvent.UID = e.UID;
 
-                        ItemChangedHandler(newEvent);
+                        TransactionLog.Add(newEvent, Action.RemoteAdd);
 
                         itemsMap.TryRemove(e, out appItem);
                         itemsMap[newEvent] = appItem;
@@ -242,9 +215,7 @@ namespace CalDav.Outlook
             foreach (IEvent e in itemsMap.Keys) {
                 try {
                     if (e.IsEqual(appItem)) {
-                        Cancel = !ItemBeforeDeleteHandler(e);
-
-                        if (!Cancel) itemsMap.TryRemove(e, out appItem);
+                        TransactionLog.Add(e, Action.RemoteDelete);
                         break;
                     }
                 }

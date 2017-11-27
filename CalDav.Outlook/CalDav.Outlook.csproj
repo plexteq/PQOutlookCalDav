@@ -89,7 +89,6 @@
     <Compile Include="Extensions\Extensions.cs" />
     <Compile Include="IController.cs" />
     <Compile Include="DB\IDataProvider.cs" />
-    <Compile Include="IItemsChangesNotify.cs" />
     <Compile Include="ISynchronizer.cs" />
     <Compile Include="Calendars\OfflineCalendar.cs" />
     <Compile Include="Calendars\OutlookCalendar.cs" />
